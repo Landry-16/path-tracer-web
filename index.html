@@ -5,9 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Path Tracer Web</title>
     <meta name="description" content="A progressive Monte Carlo path tracer running in the browser with WebGL2." />
+    <meta name="color-scheme" content="dark" />
   </head>
   <body>
-    <canvas id="view"></canvas>
+    <main class="stage">
+      <canvas id="view" tabindex="0" aria-label="Path traced room. Move the pointer to move the light, drag to orbit, scroll to zoom."></canvas>
+
+      <header class="title">
+        <h1>Path Tracer Web</h1>
+        <p>Monte Carlo path tracing on your GPU. Move the pointer to move the light, drag to orbit, scroll to zoom.</p>
+      </header>
+
+      <p class="error" id="error" hidden></p>
+
+      <footer class="bar">
+        <dl class="stats">
+          <div><dt>Samples</dt><dd id="samples">0</dd></div>
+          <div><dt>Speed</dt><dd id="speed">0 spp/s</dd></div>
+          <div><dt>Resolution</dt><dd id="resolution">0 x 0</dd></div>
+        </dl>
+        <form class="settings" id="settings">
+          <label>Scene
+            <select id="scene"></select>
+          </label>
+          <label>Exposure
+            <input id="exposure" type="range" min="0.2" max="3" step="0.05" value="1" />
+          </label>
+          <label>Depth of field
+            <input id="aperture" type="range" min="0" max="0.12" step="0.005" value="0" />
+          </label>
+          <label>Quality
+            <select id="quality">
+              <option value="0.5">Fast</option>
+              <option value="0.75">Balanced</option>
+              <option value="1" selected>Full</option>
+            </select>
+          </label>
+          <label class="toggle"><input id="lock" type="checkbox" /> Lock light</label>
+          <button type="button" id="pause">Pause</button>
+          <button type="button" id="save">Save image</button>
+        </form>
+      </footer>
+    </main>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>
