@@ -314,7 +314,7 @@ void main() {
   vec3 sampleColor = radiance(origin, dir);
   // Clamp rare high-energy paths (fireflies) so they do not dominate early frames.
   float luminance = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
-  if (luminance > 20.0) sampleColor *= 20.0 / luminance;
+  if (luminance > 8.0) sampleColor *= 8.0 / luminance;
 
   vec3 previous = uSamples > 0.0 ? texelFetch(uAccum, ivec2(gl_FragCoord.xy), 0).rgb : vec3(0);
   fragColor = vec4(mix(previous, sampleColor, 1.0 / (uSamples + 1.0)), 1.0);
