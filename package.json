@@ -1,0 +1,19 @@
+{
+  "name": "path-tracer-web",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Progressive Monte Carlo path tracer running in the browser with WebGL2.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Sandes Savarimuthu",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.7"
+  }
+}
