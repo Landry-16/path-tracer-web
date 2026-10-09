@@ -4,8 +4,8 @@
 
 export class GLError extends Error {}
 
-export function createContext(canvas: HTMLCanvasElement): WebGL2RenderingContext {
-  const gl = canvas.getContext("webgl2", {
+export function createContext(canvas: HTMLCanvasElement | OffscreenCanvas): WebGL2RenderingContext {
+  const gl = (canvas as HTMLCanvasElement).getContext("webgl2", {
     antialias: false,
     alpha: false,
     depth: false,
@@ -109,5 +109,40 @@ export class FloatTarget {
   dispose(): void {
     this.gl.deleteTexture(this.texture);
     this.gl.deleteFramebuffer(this.framebuffer);
+  }
+}
+
+/** RGBA32F texture holding scene data, one row per item. Reallocated only when it grows. */
+export class DataTexture {
+  readonly texture: WebGLTexture;
+  private width = 0;
+  private height = 0;
+
+  constructor(private readonly gl: WebGL2RenderingContext) {
+    const texture = gl.createTexture();
+    if (!texture) throw new GLError("Could not allocate data texture.");
+    this.texture = texture;
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+
+  /** Uploads `data`, laid out as rows of `texelsPerRow` RGBA texels. */
+  upload(data: Float32Array, texelsPerRow: number): void {
+    const gl = this.gl;
+    const rows = Math.max(1, Math.ceil(data.length / (texelsPerRow * 4)));
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    if (texelsPerRow !== this.width || rows > this.height) {
+      this.width = texelsPerRow;
+      this.height = Math.max(rows, this.height * 2, 8);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.width, this.height, 0, gl.RGBA, gl.FLOAT, null);
+    }
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texelsPerRow, rows, gl.RGBA, gl.FLOAT, data, 0);
+  }
+
+  dispose(): void {
+    this.gl.deleteTexture(this.texture);
   }
 }

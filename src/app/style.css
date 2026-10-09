@@ -14,7 +14,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; }
 
 .stage { position: relative; height: 100%; }
 
-#view {
+#stage {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -24,7 +24,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; }
   touch-action: none;
   outline: none;
 }
-#view:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); }
+#stage canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); }
 
 .title {
   position: absolute;
