@@ -50,6 +50,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; }
   white-space: pre-wrap;
   color: var(--ink);
 }
+/* An author display value overrides the hidden attribute, so restore it explicitly:
+   otherwise the empty overlay covers the canvas and swallows every pointer event. */
+.error[hidden] { display: none; }
 
 .bar {
   position: absolute;
