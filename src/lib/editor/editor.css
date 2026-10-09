@@ -41,6 +41,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   height: 100%;
   background: var(--bg);
   overflow: hidden;
+  container: pt-editor / inline-size;
 }
 
 /* ------------------------------------------------------------- toolbar */
@@ -102,6 +103,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .pt-editor.pt-no-right .pt-body { grid-template-columns: 248px minmax(0, 1fr) 0; }
 .pt-editor.pt-no-left.pt-no-right .pt-body { grid-template-columns: 0 minmax(0, 1fr) 0; }
 .pt-editor.pt-no-left .pt-left, .pt-editor.pt-no-right .pt-right { display: none; }
+
+/* Explicit columns: a hidden panel must not let the viewport slide into its cell. */
+.pt-left { grid-column: 1; grid-row: 1; }
+.pt-viewport { grid-column: 2; grid-row: 1; }
+.pt-right { grid-column: 3; grid-row: 1; }
 
 .pt-left, .pt-right {
   display: flex;
@@ -357,7 +363,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------------------------------------------------------- responsive */
 
-@media (max-width: 860px) {
+/* Narrow editors (small embeds, phones): panels become drawers over the viewport. */
+@container pt-editor (max-width: 860px) {
   .pt-body, .pt-editor.pt-no-left .pt-body, .pt-editor.pt-no-right .pt-body { grid-template-columns: 0 minmax(0, 1fr) 0; }
   .pt-left, .pt-right { position: absolute; top: 44px; bottom: 0; z-index: 10; width: min(300px, 86%); box-shadow: 0 0 40px rgba(0, 0, 0, 0.5); }
   .pt-left { left: 0; }

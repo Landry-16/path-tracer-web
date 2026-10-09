@@ -6,7 +6,7 @@ const STORAGE_KEY = "path-tracer-web:scene";
 const root = document.getElementById("app");
 if (!root) throw new Error("Missing #app");
 
-const editor = new Editor(root, { storageKey: STORAGE_KEY });
+const editor = new Editor(root, { storageKey: STORAGE_KEY, baseUrl: new URL(".", location.href).href });
 
 async function loadFromUrl(): Promise<void> {
   const shared = await sceneFromHash(location.hash);

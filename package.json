@@ -1,16 +1,52 @@
 {
   "name": "path-tracer-web",
-  "private": true,
-  "version": "1.0.0",
-  "description": "Progressive Monte Carlo path tracer running in the browser with WebGL2.",
+  "version": "2.0.0",
+  "description": "Progressive Monte Carlo path tracer and scene editor for the browser (WebGL2), embeddable as web components, an iframe or an ES module.",
+  "keywords": [
+    "path tracer",
+    "webgl2",
+    "pbr",
+    "raytracing",
+    "3d editor",
+    "web components"
+  ],
   "type": "module",
   "license": "MIT",
   "author": "Sandes Savarimuthu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Landry-16/path-tracer-web.git"
+  },
+  "homepage": "https://landry-16.github.io/path-tracer-web/",
+  "main": "./dist-lib/index.js",
+  "module": "./dist-lib/index.js",
+  "types": "./dist-lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist-lib/types/index.d.ts",
+      "default": "./dist-lib/index.js"
+    },
+    "./auto": {
+      "types": "./dist-lib/types/auto.d.ts",
+      "default": "./dist-lib/path-tracer.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist-lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "./dist-lib/path-tracer.js"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run typecheck && vite build && npm run build:lib && node scripts/copy-lib.mjs",
+    "build:lib": "vite build -c vite.lib.config.ts --mode index && vite build -c vite.lib.config.ts --mode auto && tsc -p tsconfig.lib.json",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build:lib"
   },
   "devDependencies": {
     "typescript": "5.9.3",

@@ -1,55 +1,153 @@
 # Path Tracer Web
 
-A progressive Monte Carlo path tracer that runs entirely in the browser, written in TypeScript and GLSL on top of WebGL2.
+A progressive Monte Carlo path tracer and scene editor that runs entirely in the browser, written in TypeScript and GLSL on top of WebGL2.
 
-It is a browser port of the ideas from my [C++ raytracer](https://github.com/Landry-16/Path-Tracer_Sandes_copy): the image starts noisy, then converges sample after sample while you watch. Move the pointer and the ceiling light follows it; the accumulation restarts and the scene converges again.
+Build a scene from primitives, lights and physically based materials, then watch it converge sample after sample on your GPU. The same engine ships as a library, so the viewer, the editor and path traced material previews can be dropped into any other project.
 
-**Live demo:** https://landry-16.github.io/path-tracer-web/
+**Editor:** https://landry-16.github.io/path-tracer-web/
+**Embedding guide (live examples):** https://landry-16.github.io/path-tracer-web/embed.html
+
+It is a browser port of the ideas from my [C++ raytracer](https://github.com/Landry-16/Path-Tracer_Sandes_copy).
 
 ## Features
 
-- Unbiased Monte Carlo path tracing, one sample per pixel per frame, blended into a running average.
-- Next event estimation towards a rectangular area light, cosine weighted hemisphere sampling and Russian roulette.
-- Materials: Lambertian diffuse, metal with adjustable roughness, and dielectric glass with Fresnel (Schlick).
-- Primitives: an open room with five walls, spheres and axis-aligned boxes.
-- Thin lens depth of field, ACES tone mapping and sRGB output.
-- Interactive light placed by casting a ray through the pointer onto the ceiling.
-- Orbit camera with mouse, touch and keyboard controls.
-- Three scene presets: a monochrome studio, a Cornell box and a metal roughness ramp.
-- Export of the current frame as a PNG.
+**Rendering**
+
+- Unbiased Monte Carlo path tracing, accumulated progressively in float textures (ping-pong), with an adaptive number of passes per frame and GPU back-pressure so input stays responsive.
+- Next event estimation combined with BSDF sampling through multiple importance sampling (power heuristic), Russian roulette and a firefly clamp.
+- Primitives: sphere, box, cylinder, cone, plane and disk, each with a full transform (position, rotation, non-uniform scale).
+- Lights: rectangular area lights, sphere lights, point lights and a sun with an adjustable angular size (soft shadows). Plus a color or sky gradient environment.
+- PBR materials close to the glTF / Disney metallic-roughness model: base color, metallic, roughness (GGX with visible normal sampling), specular level, clearcoat layer, rough transmission with exact Fresnel and IOR, emission, and a procedural checker pattern.
+- Thin lens depth of field, ACES / Reinhard / linear tone mapping, exposure in EV, sRGB output with dithering.
+
+**Editor**
+
+- Add menu for primitives, lights and materials; outliner with visibility toggles and inline renaming.
+- Click to select, translate / rotate / scale gizmos (`W` `E` `R`, hold `Ctrl` to snap), drag a selected object to slide it on the ground (`Shift` for vertical).
+- Inspector for every parameter, with drag-to-scrub number fields and live, path traced material previews.
+- Material library with thumbnails: click a swatch to assign it to the selection, or drag it onto an object; 15 material presets.
+- Light follow mode (`L`): the light tracks the pointer over the surfaces of the scene.
+- Undo / redo, autosave, JSON import / export (or drop a file on the editor), share links that encode the whole scene in the URL, embed snippets, PNG capture.
+- `Alt` + click focuses the depth of field on a surface. Press `?` for all shortcuts.
 
 ## Controls
 
 | Input | Action |
 | --- | --- |
-| Move the mouse | Move the light |
-| Drag | Orbit the camera |
-| Scroll | Zoom |
-| Double click or `0` | Reset the camera |
-| Arrow keys, `+`, `-` | Orbit and zoom from the keyboard |
-| `Space` | Pause or resume |
-| Touch: one finger / two fingers | Move the light / orbit |
+| Click | Select an object or a light |
+| Drag | Orbit (drag the selected object to move it) |
+| Right drag, middle drag or `Shift` drag | Pan |
+| Wheel / pinch | Zoom |
+| Double click | Frame the selection |
+| `W` `E` `R` | Move, rotate, scale gizmo |
+| `L` | Light follows the pointer |
+| `F` | Frame the selection |
+| `Delete`, `Ctrl+D` | Remove, duplicate |
+| `Ctrl+Z`, `Ctrl+Shift+Z` | Undo, redo |
+| `Space` | Pause rendering |
+| Arrow keys, `+`, `-`, `0` | Orbit, zoom and reset from the keyboard |
+
+## Embedding in another project
+
+Three ways, from the least to the most code. They all read the same scene JSON, which you can export from the editor.
+
+### 1. Web components (script tag)
+
+```html
+<script type="module" src="https://landry-16.github.io/path-tracer-web/lib/path-tracer.js"></script>
+
+<pt-viewer preset="cornell" light-follow style="height: 400px"></pt-viewer>
+<pt-viewer src="/scenes/product.json"></pt-viewer>
+<pt-material-preview preset="gold"></pt-material-preview>
+<pt-editor storage-key="my-scene" style="height: 640px"></pt-editor>
+```
+
+| Element | Attributes | Events / properties |
+| --- | --- | --- |
+| `<pt-viewer>` | `src`, `preset`, `light-follow`, `controls="false"`, `max-samples`, `exposure`, `resolution-scale`, or an inline `<script type="application/json">` child | `pt-ready`, `pt-frame`, `pt-change`; `.scene`, `.viewer`, `.toBlob()` |
+| `<pt-editor>` | `src`, `preset`, `storage-key`, `base-url`, `light-follow` | `pt-change`, `pt-input`, `pt-select`; `.scene`, `.editor` |
+| `<pt-material-preview>` | `preset`, `material` (JSON), `shape`, `samples`, `background="dark"` | `pt-rendered`; `.material` |
+
+Every element renders in a shadow root, so page styles and editor styles never leak into each other. All material previews of a page share a single WebGL context. Theme the editor with CSS custom properties on any ancestor: `--pt-accent`, `--pt-bg`, `--pt-panel`, `--pt-panel-2`, `--pt-field`, `--pt-line`, `--pt-text`, `--pt-muted`, `--pt-font`.
+
+### 2. Iframe
+
+```html
+<iframe src="https://landry-16.github.io/path-tracer-web/viewer.html?preset=materials&follow=1&ui=0"
+  style="width: 100%; aspect-ratio: 16 / 9; border: 0" loading="lazy"></iframe>
+```
+
+Options: `preset`, `src` (URL of a scene JSON), `#s=` (share payload, generated by the **Embed** button of the editor), `controls=0`, `follow=1`, `ui=0`, `samples=N`. The parent page can post `{ type: "pt:set-scene", scene }` or `{ type: "pt:snapshot" }` to the frame.
+
+### 3. ES module
+
+```bash
+npm install github:Landry-16/path-tracer-web
+```
+
+```ts
+import { Viewer, Editor, createScene, createMaterial, createObject, createLight, renderMaterialPreview } from "path-tracer-web";
+
+const gold = createMaterial({ name: "Gold", baseColor: "#ffd27a", metallic: 1, roughness: 0.15 });
+const scene = createScene({
+  materials: [gold],
+  objects: [createObject("sphere", { position: [0, 0.5, 0], materialId: gold.id })],
+  lights: [createLight("sun", { rotation: [-40, 0, 30] })],
+  environment: { type: "sky" },
+});
+
+const viewer = new Viewer(document.querySelector("#view")!, { scene, lightFollow: true });
+viewer.scene.objects[0].position[1] = 1; // mutate freely, the render restarts on the next frame
+
+const editor = new Editor(document.querySelector("#app")!, { storageKey: "my-scene" });
+editor.on("change", ({ scene }) => save(scene));
+
+renderMaterialPreview(gold, document.querySelector("canvas")!, { samples: 96 });
+```
+
+The package is typed and side-effect free; import `path-tracer-web/auto` instead to register the custom elements on import. Main exports: `Viewer`, `Editor`, `Renderer`, `renderMaterialPreview`, `defineElements`, the scene factories (`createScene`, `createMaterial`, `createObject`, `createLight`, `normalizeScene`), presets (`SCENE_PRESETS`, `MATERIAL_PRESETS`), share links (`encodeScene`, `decodeScene`) and camera / raycast helpers.
+
+## Scene format
+
+Plain, versioned JSON. Colors are sRGB hex strings, angles are degrees, and every primitive fits the unit cube, so `scale` is its size in scene units. `normalizeScene` fills in defaults and repairs invalid values, so hand written scenes can stay short.
+
+```json
+{
+  "version": 2,
+  "name": "My scene",
+  "camera": { "target": [0, 0.5, 0], "yaw": 20, "pitch": 15, "distance": 4, "fov": 38, "aperture": 0, "focusDistance": 0 },
+  "environment": { "type": "sky", "zenith": "#4a7bc8", "horizon": "#c9d6e6", "ground": "#3a3632", "intensity": 0.45 },
+  "render": { "maxBounces": 8, "maxSamples": 4096, "exposure": 0, "toneMapping": "aces", "clamp": 8 },
+  "materials": [{ "id": "gold", "name": "Gold", "baseColor": "#ffd27a", "metallic": 1, "roughness": 0.15 }],
+  "objects": [{ "id": "ball", "shape": "sphere", "position": [0, 0.5, 0], "scale": [1, 1, 1], "materialId": "gold" }],
+  "lights": [{ "id": "sun", "type": "sun", "rotation": [-40, 0, 30], "intensity": 2.4, "angle": 1 }]
+}
+```
+
+Light units: area and sphere lights use emitted radiance, point lights radiant intensity, and the sun its irradiance on a surface facing it. Area lights and suns shine along their local -Y axis.
 
 ## How it works
 
 Each frame runs two passes over a full screen triangle:
 
-1. **Trace** (`src/shaders/trace.frag`): every pixel traces one camera path through the scene. At each diffuse hit, a shadow ray samples a random point on the area light (next event estimation), then the path continues in a cosine weighted direction. Specular bounces (metal, glass) keep emission visible so reflections and refractions of the light stay correct. The new sample is mixed into an `RGBA32F` accumulation texture with weight `1 / (n + 1)`.
-2. **Display** (`src/shaders/display.frag`): the accumulated radiance is tone mapped and written to the canvas.
+1. **Trace** (`src/lib/render/shaders/trace.frag`): every pixel traces one camera path. The scene lives in three float textures (objects with their inverse transforms and bounding spheres, materials, lights) that `src/lib/render/pack.ts` rebuilds when the scene changes. At each hit, one light is sampled for direct lighting and the BSDF chooses the next direction; both estimates are weighted with MIS. The new sample is blended into an `RGBA32F` accumulation texture with weight `1 / (n + 1)`.
+2. **Display** (`display.frag`): exposure, tone mapping and sRGB encoding to the canvas.
 
-Two float textures are used in ping-pong, so the trace pass always reads the previous average and writes the next one. Any change to the camera, light or scene resets the sample count. Rendering stops once the image reaches 4096 samples per pixel.
+The renderer compares the packed scene with the previous frame, so any change, whether from the UI, a gizmo or your own code mutating `viewer.scene`, restarts the accumulation automatically.
 
 ## Project structure
 
 ```text
-src/
-  main.ts          UI wiring and render loop
-  renderer.ts      Accumulation, uniforms upload and the two passes
-  controls.ts      Pointer, touch and keyboard input
-  camera.ts        Orbit camera
-  scene.ts         Scene model and presets
-  gl.ts            WebGL2 helpers (programs, float targets)
-  shaders/         GLSL sources
+src/lib/                Library (published as the npm package and lib/path-tracer.js)
+  core/                 Scene model, presets, math, camera, CPU raycasting, share links
+  render/               WebGL2 helpers, scene packing, renderer and GLSL shaders
+  viewer/               Viewer: canvas, render loop, camera and light-follow controls
+  editor/               Editor UI: panels, fields, gizmos, history, styles
+  preview/              Shared-context material previews
+  elements/             <pt-viewer>, <pt-editor>, <pt-material-preview>
+  index.ts, auto.ts     Library entry points
+src/app/                The site: editor page, iframe viewer, embedding guide
+index.html, viewer.html, embed.html
 ```
 
 ## Getting started
@@ -58,12 +156,12 @@ Requires Node.js 22 and a browser with WebGL2 and `EXT_color_buffer_float` (all 
 
 ```bash
 npm install
-npm run dev       # local development server
-npm run build     # type check and production build in dist/
-npm run preview   # serve the production build
+npm run dev        # local development server (editor, viewer.html, embed.html)
+npm run build      # type check, site build in dist/ and library build in dist-lib/
+npm run preview    # serve the production build
 ```
 
-Every push to `main` is built and deployed to GitHub Pages by `.github/workflows/deploy.yml`.
+Every push to `main` is built and deployed to GitHub Pages by `.github/workflows/deploy.yml`, including the script-tag bundle under `lib/`.
 
 ## License
 

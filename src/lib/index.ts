@@ -10,7 +10,7 @@
  */
 
 export { Viewer, type ViewerOptions, type ViewerEvents, type FrameInfo, type PointerTool } from "./viewer/viewer";
-export { Editor, type EditorOptions, type EditorEvents } from "./editor/editor";
+export { Editor, DEFAULT_BASE_URL, type EditorOptions, type EditorEvents } from "./editor/editor";
 export { renderMaterialPreview, type PreviewOptions } from "./preview/preview";
 export { Renderer } from "./render/renderer";
 export { GLError } from "./render/gl";

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embedding Guide</title>
+    <meta name="description" content="Put the path tracer, its editor and material previews in your own pages: web components, iframe or ES module." />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./src/app/style.css" />
+  </head>
+  <body class="guide">
+    <header class="guide-head">
+      <a class="guide-brand" href="./"><span class="mark"></span>Path Tracer</a>
+      <nav>
+        <a href="./">Editor</a>
+        <a href="./embed.html" aria-current="page">Embedding</a>
+        <a href="https://github.com/Landry-16/path-tracer-web">GitHub</a>
+      </nav>
+    </header>
+
+    <main class="guide-main">
+      <section class="hero">
+        <h1>Use the path tracer in your own project</h1>
+        <p>
+          Everything the editor does is available as a library: a viewer, the full editor and path traced material
+          previews. Pick the integration that fits your stack. All three share the same JSON scene format, so a scene
+          made in the editor drops straight into any of them.
+        </p>
+        <ul class="ways">
+          <li><a href="#components"><b>Web components</b><span>One script tag, works in plain HTML, React, Vue, Svelte.</span></a></li>
+          <li><a href="#iframe"><b>Iframe</b><span>Zero code: paste a link, isolated from your page.</span></a></li>
+          <li><a href="#module"><b>ES module</b><span>Full API for bundlers, typed with TypeScript.</span></a></li>
+        </ul>
+      </section>
+
+      <section id="components">
+        <h2>Web components</h2>
+        <p>Load the bundle once, then use the elements anywhere. Each element renders inside a shadow root, so your CSS and theirs never collide.</p>
+        <pre><code id="snippet-script"></code></pre>
+
+        <h3>&lt;pt-viewer&gt;</h3>
+        <div class="demo-row">
+          <pt-viewer class="demo-viewer" preset="cornell" light-follow max-samples="2048"></pt-viewer>
+          <div class="demo-notes">
+            <p>Move the pointer over the image: <code>light-follow</code> makes the ceiling light track it. Drag to orbit, right drag to pan, scroll to zoom.</p>
+            <dl class="attrs">
+              <dt>src</dt><dd>URL of a scene JSON (exported from the editor).</dd>
+              <dt>preset</dt><dd>studio, cornell, roughness, materials, primitives, empty.</dd>
+              <dt>light-follow</dt><dd>The light follows the pointer.</dd>
+              <dt>controls="false"</dt><dd>Static image, no camera input.</dd>
+              <dt>max-samples, exposure, resolution-scale</dt><dd>Quality and look.</dd>
+            </dl>
+          </div>
+        </div>
+        <pre><code>&lt;pt-viewer preset="cornell" light-follow style="height: 360px"&gt;&lt;/pt-viewer&gt;
+
+&lt;!-- or with your own scene, inline or by URL --&gt;
+&lt;pt-viewer src="/scenes/product.json"&gt;&lt;/pt-viewer&gt;
+&lt;pt-viewer&gt;
+  &lt;script type="application/json"&gt;{ "objects": [...], "lights": [...] }&lt;/script&gt;
+&lt;/pt-viewer&gt;</code></pre>
+
+        <h3>&lt;pt-material-preview&gt;</h3>
+        <p>Path traced material balls. Every preview on a page shares one WebGL context, so a catalogue of dozens stays cheap.</p>
+        <div class="swatch-row" id="swatches"></div>
+        <div class="live-material">
+          <pt-material-preview id="live-preview" samples="128"></pt-material-preview>
+          <form id="live-form" class="live-form">
+            <label>Base color <input type="color" name="baseColor" value="#c23b22" /></label>
+            <label>Metallic <input type="range" name="metallic" min="0" max="1" step="0.01" value="0" /></label>
+            <label>Roughness <input type="range" name="roughness" min="0" max="1" step="0.01" value="0.3" /></label>
+            <label>Transmission <input type="range" name="transmission" min="0" max="1" step="0.01" value="0" /></label>
+            <label>Clearcoat <input type="range" name="clearcoat" min="0" max="1" step="0.01" value="0.6" /></label>
+          </form>
+        </div>
+        <pre><code>&lt;pt-material-preview preset="gold"&gt;&lt;/pt-material-preview&gt;
+&lt;pt-material-preview material='{"baseColor":"#c23b22","roughness":0.3}'&gt;&lt;/pt-material-preview&gt;
+
+&lt;script type="module"&gt;
+  const preview = document.querySelector("pt-material-preview");
+  preview.material = { baseColor: "#1d3f9c", metallic: 0, roughness: 0.4, clearcoat: 1 };
+&lt;/script&gt;</code></pre>
+
+        <h3>&lt;pt-editor&gt;</h3>
+        <p>The complete editor, sized by its container. Listen to <code>pt-change</code> to save scenes in your own backend.</p>
+        <pt-editor class="demo-editor" preset="primitives"></pt-editor>
+        <p class="event-log" id="event-log">Edit something above: the latest <code>pt-change</code> event will show up here.</p>
+        <pre><code>&lt;pt-editor src="/scenes/room.json" style="height: 640px"&gt;&lt;/pt-editor&gt;
+
+&lt;script type="module"&gt;
+  const editor = document.querySelector("pt-editor");
+  editor.addEventListener("pt-change", (event) =&gt; {
+    fetch("/api/scenes/42", { method: "PUT", body: JSON.stringify(event.detail.scene) });
+  });
+&lt;/script&gt;</code></pre>
+      </section>
+
+      <section id="iframe">
+        <h2>Iframe</h2>
+        <p>
+          <code>viewer.html</code> shows a scene full window. In the editor, the <b>Embed</b> button generates the link
+          for your current scene. Query options: <code>preset</code>, <code>src</code>, <code>controls=0</code>,
+          <code>follow=1</code>, <code>ui=0</code>, <code>samples=N</code>.
+        </p>
+        <iframe class="demo-iframe" id="demo-iframe" title="Material showcase" loading="lazy"></iframe>
+        <pre><code id="snippet-iframe"></code></pre>
+        <p>
+          The parent page can drive it with <code>postMessage</code>:
+          <code>{ type: "pt:set-scene", scene }</code> replaces the scene and <code>{ type: "pt:snapshot" }</code>
+          answers with a PNG blob.
+        </p>
+      </section>
+
+      <section id="module">
+        <h2>ES module</h2>
+        <p>Install from GitHub (the package builds itself on install), then import what you need. Types are included.</p>
+        <pre><code>npm install github:Landry-16/path-tracer-web</code></pre>
+        <pre><code>import { Viewer, Editor, createScene, createMaterial, createObject, createLight, renderMaterialPreview } from "path-tracer-web";
+
+// A scene from code
+const gold = createMaterial({ name: "Gold", baseColor: "#ffd27a", metallic: 1, roughness: 0.15 });
+const scene = createScene({
+  materials: [gold],
+  objects: [createObject("sphere", { position: [0, 0.5, 0], materialId: gold.id })],
+  lights: [createLight("sun", { rotation: [-40, 0, 30] })],
+  environment: { type: "sky" },
+});
+
+// A viewer in any element
+const viewer = new Viewer(document.querySelector("#view"), { scene, lightFollow: true });
+viewer.on("frame", ({ samples }) =&gt; console.log(samples));
+viewer.scene.objects[0].position[1] = 1; // mutate freely: the next frame restarts the render
+
+// The whole editor
+const editor = new Editor(document.querySelector("#app"), { storageKey: "my-scene" });
+editor.on("change", ({ scene }) =&gt; save(scene));
+
+// Thumbnails for your own UI
+renderMaterialPreview(gold, document.querySelector("canvas.thumb"), { samples: 96 });
+
+// Or register the custom elements yourself
+import { defineElements } from "path-tracer-web";
+defineElements(); // &lt;pt-viewer&gt;, &lt;pt-editor&gt;, &lt;pt-material-preview&gt;</code></pre>
+      </section>
+
+      <section id="format">
+        <h2>Scene format</h2>
+        <p>
+          Plain JSON, versioned. Colors are sRGB hex strings, angles are degrees, and every primitive fits the unit
+          cube so <code>scale</code> is its size in scene units. Missing fields get defaults through
+          <code>normalizeScene</code>, so hand written scenes can stay short.
+        </p>
+        <pre><code>{
+  "version": 2,
+  "name": "My scene",
+  "camera": { "target": [0, 0.5, 0], "yaw": 20, "pitch": 15, "distance": 4, "fov": 38, "aperture": 0, "focusDistance": 0 },
+  "environment": { "type": "sky", "zenith": "#4a7bc8", "horizon": "#c9d6e6", "ground": "#3a3632", "intensity": 0.45 },
+  "render": { "maxBounces": 8, "maxSamples": 4096, "exposure": 0, "toneMapping": "aces", "clamp": 8 },
+  "materials": [
+    { "id": "gold", "name": "Gold", "baseColor": "#ffd27a", "metallic": 1, "roughness": 0.15,
+      "specular": 0.5, "transmission": 0, "ior": 1.5, "clearcoat": 0, "clearcoatRoughness": 0.05,
+      "emission": "#ffffff", "emissionStrength": 0, "pattern": "none", "patternColor": "#222222", "patternScale": 4 }
+  ],
+  "objects": [
+    { "id": "ball", "name": "Ball", "shape": "sphere", "position": [0, 0.5, 0], "rotation": [0, 0, 0],
+      "scale": [1, 1, 1], "materialId": "gold", "visible": true }
+  ],
+  "lights": [
+    { "id": "sun", "name": "Sun", "type": "sun", "rotation": [-40, 0, 30], "color": "#fff4e0",
+      "intensity": 2.4, "angle": 1, "enabled": true }
+  ]
+}</code></pre>
+        <p>
+          Shapes: sphere, box, cylinder, cone, plane, disk. Lights: area (size, faces its local -Y), sphere (radius),
+          point, sun (angle). Theme the editor from your page with CSS custom properties such as
+          <code>--pt-accent</code>, <code>--pt-bg</code>, <code>--pt-panel</code> and <code>--pt-font</code>.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="./src/app/embed.ts"></script>
+  </body>
+</html>

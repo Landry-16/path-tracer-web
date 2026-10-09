@@ -37,7 +37,7 @@ export const MATERIAL_PRESETS: MaterialPreset[] = [
   { id: "frosted-glass", label: "Frosted glass", material: { baseColor: "#f4f8ff", transmission: 1, roughness: 0.3, ior: 1.5 } },
   { id: "jade", label: "Jade", material: { baseColor: "#7fd6a4", transmission: 0.85, roughness: 0.18, ior: 1.6 } },
   { id: "diamond", label: "Diamond", material: { baseColor: "#ffffff", transmission: 1, roughness: 0, ior: 2.42 } },
-  { id: "emissive", label: "Emissive", material: { baseColor: "#111111", emission: "#ffb070", emissionStrength: 6 } },
+  { id: "emissive", label: "Emissive", material: { baseColor: "#111111", emission: "#ff9a4d", emissionStrength: 2 } },
   { id: "checker", label: "Checker", material: { baseColor: "#e8e8e8", roughness: 0.6, pattern: "checker", patternColor: "#2a2a2a", patternScale: 4 } },
 ];
 

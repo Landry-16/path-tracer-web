@@ -47,7 +47,7 @@ export interface EditorOptions {
   scene?: Scene | object;
   /** When set, the scene is saved to localStorage under this key and restored on the next visit. */
   storageKey?: string | null;
-  /** Base URL of a deployed copy of this project, used to build share and embed links. */
+  /** Base URL of a deployed copy of this project, used to build share and embed links. Defaults to DEFAULT_BASE_URL. */
   baseUrl?: string;
   /** Light follows the pointer from the start. Default false. */
   lightFollow?: boolean;
@@ -64,6 +64,9 @@ export type EditorEvents = {
 };
 
 type Selection = { type: "item"; id: string } | { type: "material"; id: string } | null;
+
+/** Public deployment used for share and embed links when no baseUrl is given. */
+export const DEFAULT_BASE_URL = "https://landry-16.github.io/path-tracer-web/";
 
 const SHAPE_LABELS: Record<ShapeType, string> = { sphere: "Sphere", box: "Box", cylinder: "Cylinder", cone: "Cone", plane: "Plane", disk: "Disk" };
 const LIGHT_LABELS: Record<LightType, string> = { area: "Area light", sphere: "Sphere light", point: "Point light", sun: "Sun" };
@@ -738,7 +741,8 @@ export class Editor extends Emitter<EditorEvents> {
   }
 
   private baseUrl(): string {
-    return this.options.baseUrl ?? new URL(".", location.href).href;
+    const base = this.options.baseUrl ?? DEFAULT_BASE_URL;
+    return base.endsWith("/") ? base : `${base}/`;
   }
 
   private async shareUrl(page = ""): Promise<string> {
@@ -896,6 +900,7 @@ export class Editor extends Emitter<EditorEvents> {
       ...SCENE_PRESETS.map((p) => this.menuItem("scene", p.label, () => this.setScene(scenePreset(p.id)))),
       h("hr"),
       this.menuItem("code", "Keyboard shortcuts", () => this.openShortcuts(), "?"),
+      this.menuItem("share", "Embedding guide", () => window.open(`${this.baseUrl()}embed.html`, "_blank", "noopener")),
     );
   }
 
@@ -933,7 +938,13 @@ export class Editor extends Emitter<EditorEvents> {
       h("div", { class: "pt-tree-group" }, `Objects (${scene.objects.length})`),
       ...scene.objects.map((o) => rowFor(o.id, o.shape, o.name, o.visible, () => (o.visible = !o.visible), o.visible ? "Hide" : "Show")),
     );
-    tree.querySelector(".pt-selected")?.scrollIntoView({ block: "nearest" });
+    // Scroll the tree only (scrollIntoView would also scroll the host page when embedded).
+    const selectedRow = tree.querySelector<HTMLElement>(".pt-selected");
+    if (selectedRow) {
+      const top = selectedRow.offsetTop - tree.offsetTop;
+      if (top < tree.scrollTop) tree.scrollTop = top;
+      else if (top + selectedRow.offsetHeight > tree.scrollTop + tree.clientHeight) tree.scrollTop = top + selectedRow.offsetHeight - tree.clientHeight;
+    }
   }
 
   private renameInline(id: string, label: HTMLElement): void {

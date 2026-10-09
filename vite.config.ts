@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         editor: resolve(__dirname, "index.html"),
         viewer: resolve(__dirname, "viewer.html"),
+        embed: resolve(__dirname, "embed.html"),
       },
     },
   },
