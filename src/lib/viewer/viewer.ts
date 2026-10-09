@@ -39,6 +39,8 @@ export type ViewerEvents = {
   change: { source: "camera" | "light" };
   /** WebGL could not start or the context was lost. */
   error: { message: string };
+  /** A click or tap on the canvas that did not turn into a camera drag. */
+  tap: { clientX: number; clientY: number; button: number; altKey: boolean; shiftKey: boolean };
 };
 
 /**
@@ -87,6 +89,7 @@ export class Viewer extends Emitter<ViewerEvents> {
   private passes = 1;
   private lastFrame = 0;
   private frameTime = 16;
+  private gpuBehind = false;
   private rateStart = 0;
   private rateSamples = 0;
   private samplesPerSecond = 0;
@@ -155,10 +158,13 @@ export class Viewer extends Emitter<ViewerEvents> {
     return this._scene;
   }
 
-  /** Replaces the scene. The camera becomes the new "home" camera for double click and the 0 key. */
-  setScene(scene: Scene | object): void {
+  /**
+   * Replaces the scene. By default its camera becomes the "home" camera used by
+   * double click and the 0 key; pass `{ keepHome: true }` to keep the previous one.
+   */
+  setScene(scene: Scene | object, options: { keepHome?: boolean } = {}): void {
     this._scene = normalizeScene(scene);
-    this.homeCamera = structuredClone(this._scene.camera);
+    if (!options.keepHome) this.homeCamera = structuredClone(this._scene.camera);
     this.renderer?.reset();
   }
 
@@ -282,6 +288,12 @@ export class Viewer extends Emitter<ViewerEvents> {
 
     if (this.paused || document.hidden || !this.onScreen) return;
 
+    // GPU still busy with the last frame: wait instead of piling up work, and do less next time.
+    if (renderer.busy()) {
+      this.passes = Math.max(1, this.passes - 1);
+      this.gpuBehind = true;
+      return;
+    }
     const changed = renderer.sync(this._scene);
     const max = this._scene.render.maxSamples;
     const converged = max > 0 && renderer.samples >= max;
@@ -295,8 +307,9 @@ export class Viewer extends Emitter<ViewerEvents> {
 
     // Adapt the work per frame: one pass while the image changes, more when idle and the GPU keeps up.
     if (changed || renderer.samples < 4) this.passes = 1;
-    else if (this.frameTime < 20 && this.passes < this.maxPassesPerFrame) this.passes++;
+    else if (!this.gpuBehind && this.frameTime < 20 && this.passes < this.maxPassesPerFrame) this.passes++;
     else if (this.frameTime > 30 && this.passes > 1) this.passes--;
+    this.gpuBehind = false;
     const passes = max > 0 ? Math.min(this.passes, max - renderer.samples) : this.passes;
     renderer.render(passes);
     this.lastPresented = { exposure: renderer.exposure, toneMapping: renderer.toneMapping };
@@ -410,6 +423,9 @@ export class Viewer extends Emitter<ViewerEvents> {
     }
     if (this.pointers.size < 2) this.pinch = null;
     if (this.pointers.size === 0) {
+      if (this.drag && this.drag.moved < 4) {
+        this.emit("tap", { clientX: e.clientX, clientY: e.clientY, button: e.button, altKey: e.altKey, shiftKey: e.shiftKey });
+      }
       this.drag = null;
       this.canvas.style.cursor = "grab";
     }

@@ -269,12 +269,18 @@ export interface Bounds {
   max: Vec3;
 }
 
+/** Local half height of a shape: flat shapes have no thickness. */
+function halfHeight(object: SceneObject): number {
+  return object.shape === "plane" || object.shape === "disk" ? 0 : 0.5;
+}
+
 export function objectBounds(object: SceneObject): Bounds {
   const f = objectFrame(object);
   const min: Vec3 = [Infinity, Infinity, Infinity];
   const max: Vec3 = [-Infinity, -Infinity, -Infinity];
+  const hy = halfHeight(object);
   for (let i = 0; i < 8; i++) {
-    const corner: Vec3 = [i & 1 ? 0.5 : -0.5, i & 2 ? 0.5 : -0.5, i & 4 ? 0.5 : -0.5];
+    const corner: Vec3 = [i & 1 ? 0.5 : -0.5, i & 2 ? hy : -hy, i & 4 ? 0.5 : -0.5];
     const p = transformPoint(f.matrix, corner);
     for (let k = 0; k < 3; k++) {
       min[k] = Math.min(min[k], p[k]);
@@ -305,8 +311,9 @@ export function sceneBounds(scene: Scene): Bounds | null {
 export function objectCorners(object: SceneObject): Vec3[] {
   const { matrix } = objectFrame(object);
   const corners: Vec3[] = [];
+  const hy = halfHeight(object);
   for (let i = 0; i < 8; i++) {
-    corners.push(transformPoint(matrix, [i & 1 ? 0.5 : -0.5, i & 2 ? 0.5 : -0.5, i & 4 ? 0.5 : -0.5]));
+    corners.push(transformPoint(matrix, [i & 1 ? 0.5 : -0.5, i & 2 ? hy : -hy, i & 4 ? 0.5 : -0.5]));
   }
   return corners;
 }

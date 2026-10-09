@@ -144,6 +144,7 @@ export class Renderer {
       this.samples++;
     }
     this.present();
+    this.fenceFrame();
   }
 
   /** Re-runs only the display pass, e.g. after an exposure change. */
@@ -162,9 +163,28 @@ export class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  /** Blocks until the GPU finished the queued work. Useful to measure pass cost. */
-  finish(): void {
-    this.gl.finish();
+  private fence: WebGLSync | null = null;
+
+  /**
+   * True while the GPU is still working on the previously submitted frame.
+   * Callers skip a frame instead of queueing more work, which keeps input responsive.
+   */
+  busy(): boolean {
+    const gl = this.gl;
+    if (!this.fence) return false;
+    const status = gl.getSyncParameter(this.fence, gl.SYNC_STATUS);
+    if (status !== gl.SIGNALED) return true;
+    gl.deleteSync(this.fence);
+    this.fence = null;
+    return false;
+  }
+
+  /** Marks the end of the submitted work so `busy()` can tell when the GPU caught up. */
+  private fenceFrame(): void {
+    const gl = this.gl;
+    if (this.fence) gl.deleteSync(this.fence);
+    this.fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    gl.flush();
   }
 
   dispose(): void {
