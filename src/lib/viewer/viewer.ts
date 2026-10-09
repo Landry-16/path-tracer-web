@@ -1,4 +1,4 @@
-import { cameraRay, orbit, pan, projectPoint, zoom, type Ray } from "../core/camera";
+import { cameraRay, orbit, pan, projectPoint, viewTanHalf, zoom, type Ray } from "../core/camera";
 import { Emitter } from "../core/emitter";
 import { raycast, sceneBounds, type RayHit } from "../core/geometry";
 import { clamp, madd, type Vec3 } from "../core/math";
@@ -336,7 +336,8 @@ export class Viewer extends Emitter<ViewerEvents> {
   /** About 10 CSS pixels, measured at the depth of the camera target. */
   private handleRadius(): number {
     const cam = this._scene.camera;
-    return (cam.distance * Math.tan((cam.fov * Math.PI) / 360) * 2 * 10) / this.size.height;
+    const { width, height } = this.size;
+    return (cam.distance * viewTanHalf(Math.tan((cam.fov * Math.PI) / 360), width / height) * 2 * 10) / height;
   }
 
   /* ------------------------------------------------------------ pointer */

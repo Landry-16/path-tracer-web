@@ -16,6 +16,15 @@ export interface Ray {
   direction: Vec3;
 }
 
+/**
+ * Vertical tan(fov / 2) actually used for an image of the given aspect ratio: the field of
+ * view is vertical for landscape images and horizontal for portrait ones, so a scene framed
+ * on a desktop stays framed on a phone held upright.
+ */
+export function viewTanHalf(tanHalfFov: number, aspect: number): number {
+  return aspect < 1 ? tanHalfFov / aspect : tanHalfFov;
+}
+
 /** Orbit camera basis: the eye sits on a sphere around `target`. */
 export function cameraBasis(camera: Camera): CameraBasis {
   const yaw = camera.yaw * DEG;
@@ -40,9 +49,8 @@ export function cameraBasis(camera: Camera): CameraBasis {
 /** Ray through normalized device coordinates (-1..1, y up). */
 export function cameraRay(camera: Camera, ndcX: number, ndcY: number, aspect: number): Ray {
   const b = cameraBasis(camera);
-  const direction = normalize(
-    add(add(b.forward, scale(b.right, ndcX * b.tanHalfFov * aspect)), scale(b.up, ndcY * b.tanHalfFov)),
-  );
+  const t = viewTanHalf(b.tanHalfFov, aspect);
+  const direction = normalize(add(add(b.forward, scale(b.right, ndcX * t * aspect)), scale(b.up, ndcY * t)));
   return { origin: b.position, direction };
 }
 
@@ -52,9 +60,10 @@ export function projectPoint(camera: Camera, point: Vec3, aspect: number): { x: 
   const v = sub(point, b.position);
   const depth = dot(v, b.forward);
   const z = Math.abs(depth) < 1e-6 ? 1e-6 : depth;
+  const t = viewTanHalf(b.tanHalfFov, aspect);
   return {
-    x: dot(v, b.right) / (z * b.tanHalfFov * aspect),
-    y: dot(v, b.up) / (z * b.tanHalfFov),
+    x: dot(v, b.right) / (z * t * aspect),
+    y: dot(v, b.up) / (z * t),
     depth,
   };
 }

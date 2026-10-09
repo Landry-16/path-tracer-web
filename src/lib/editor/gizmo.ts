@@ -4,7 +4,7 @@
  * through the PointerTool interface so camera controls keep working everywhere else.
  */
 
-import { cameraBasis } from "../core/camera";
+import { cameraBasis, viewTanHalf } from "../core/camera";
 import { areaCorners, lightFrame, objectCorners, raycast } from "../core/geometry";
 import {
   add,
@@ -102,7 +102,8 @@ export class Gizmo implements PointerTool {
   private gizmoLength(origin: Vec3): number {
     const b = cameraBasis(this.scene.camera);
     const depth = Math.max(dot(sub(origin, b.position), b.forward), 0.05);
-    return (depth * b.tanHalfFov * 2 * 70) / this.viewer.size.height;
+    const { width, height } = this.viewer.size;
+    return (depth * viewTanHalf(b.tanHalfFov, width / height) * 2 * 70) / height;
   }
 
   /** Axes for the current mode: world axes for translate and rotate, local axes for scale. */
@@ -273,7 +274,7 @@ export class Gizmo implements PointerTool {
         factor = Math.exp((e.clientX - d.startClient[0] - (e.clientY - d.startClient[1])) / 120);
       }
       factor = Math.max(0.01, factor);
-      const round = (v: number): number => (fine ? Math.max(0.05, snap(v, 0.05)) : Math.max(0.001, v));
+      const round = (v: number): number => (fine ? Math.max(0.05, snap(v, 0.05)) : Math.max(0.001, Math.round(v * 10000) / 10000));
       if (d.item.kind === "object") {
         const s = [...d.startScale] as Vec3;
         if (d.handle.kind === "axis") s[d.handle.axis] = round(s[d.handle.axis] * factor);

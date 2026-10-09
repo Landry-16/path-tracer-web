@@ -733,7 +733,9 @@ void main() {
   vec2 jitter = rand2();
   vec2 ndc = (gl_FragCoord.xy - 0.5 + jitter) / uResolution * 2.0 - 1.0;
   float aspect = uResolution.x / uResolution.y;
-  vec3 dir = normalize(uCamForward + uCamRight * (ndc.x * uTanHalfFov * aspect) + uCamUp * (ndc.y * uTanHalfFov));
+  // Vertical field of view in landscape, horizontal in portrait (see viewTanHalf in camera.ts).
+  float tanHalf = aspect < 1.0 ? uTanHalfFov / aspect : uTanHalfFov;
+  vec3 dir = normalize(uCamForward + uCamRight * (ndc.x * tanHalf * aspect) + uCamUp * (ndc.y * tanHalf));
 
   vec3 origin = uCamPos;
   if (uAperture > 0.0) {

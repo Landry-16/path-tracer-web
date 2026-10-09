@@ -59,6 +59,6 @@ export {
 } from "./core/scene";
 export { SCENE_PRESETS, MATERIAL_PRESETS, scenePreset, materialFromPreset, type ScenePreset, type MaterialPreset } from "./core/presets";
 export { encodeScene, decodeScene, sceneFromHash } from "./core/share";
-export { cameraBasis, cameraRay, projectPoint, orbit, pan, zoom, frame, type CameraBasis, type Ray } from "./core/camera";
+export { cameraBasis, cameraRay, projectPoint, viewTanHalf, orbit, pan, zoom, frame, type CameraBasis, type Ray } from "./core/camera";
 export { raycast, sceneBounds, objectBounds, type RayHit, type Bounds } from "./core/geometry";
 export type { Vec3 } from "./core/math";
